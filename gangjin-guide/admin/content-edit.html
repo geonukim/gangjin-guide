@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>콘텐츠 등록/수정 — 강진 여행 가이드 관리자</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green:#2B3D2C; --green-l:#4A6B4C; --green-t:#EBF1E8;
+    --cream:#FAF8F4; --stone:#F0EDE8; --border:#E5DDD5;
+    --text:#1C1814; --muted:#9C8B78; --red:#E05C5C; --radius:10px;
+  }
+  body { font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--cream); color:var(--text); min-height:100vh; }
+  .layout { display:flex; min-height:100vh; }
+
+  /* 사이드바 */
+  .sidebar { width:220px; background:var(--green); color:#fff; display:flex; flex-direction:column; flex-shrink:0; position:fixed; top:0; left:0; bottom:0; }
+  .sidebar-brand { padding:24px 20px 20px; border-bottom:1px solid rgba(255,255,255,0.1); }
+  .sidebar-brand h1 { font-size:14px; font-weight:600; color:#fff; letter-spacing:-0.2px; line-height:1.4; }
+  .sidebar-brand p { font-size:10px; color:rgba(255,255,255,0.5); margin-top:3px; }
+  .sidebar-nav { padding:12px 0; flex:1; }
+  .nav-section { padding:8px 20px 4px; font-size:9px; letter-spacing:1.5px; color:rgba(255,255,255,0.35); }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:13px; color:rgba(255,255,255,0.75); text-decoration:none; transition:background 0.15s; }
+  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
+  .nav-item.active { background:rgba(255,255,255,0.12); color:#fff; font-weight:500; }
+  .nav-item svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .sidebar-bottom { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.1); }
+  .btn-logout { width:100%; padding:8px; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-size:12px; cursor:pointer; font-family:inherit; }
+  .btn-logout:hover { background:rgba(255,255,255,0.15); color:#fff; }
+
+  /* 메인 */
+  .main { margin-left:220px; flex:1; }
+  .topbar { height:56px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:10; }
+  .topbar-title { font-size:16px; font-weight:600; letter-spacing:-0.3px; }
+  .topbar-actions { display:flex; gap:8px; }
+
+  .btn { height:34px; padding:0 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; border:none; display:inline-flex; align-items:center; gap:6px; transition:background 0.15s; text-decoration:none; }
+  .btn-primary { background:var(--green); color:#fff; }
+  .btn-primary:hover { background:var(--green-l); }
+  .btn-secondary { background:var(--stone); color:var(--text); border:1px solid var(--border); }
+  .btn-secondary:hover { background:var(--border); }
+  .btn-danger { background:#FEE2E2; color:var(--red); }
+  .btn-danger:hover { background:#FECACA; }
+  .btn svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+
+  .content { padding:28px; max-width:900px; }
+
+  /* 폼 레이아웃 */
+  .form-grid { display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start; }
+
+  .form-card { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:16px; }
+  .form-card-header { padding:14px 20px; border-bottom:1px solid var(--border); font-size:13px; font-weight:600; color:var(--text); }
+  .form-card-body { padding:20px; }
+
+  /* 폼 필드 */
+  .field { margin-bottom:16px; }
+  .field:last-child { margin-bottom:0; }
+  .field label { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:6px; }
+  .field label .req { color:var(--red); margin-left:2px; }
+
+  .input, .textarea, .select {
+    width:100%; border:1px solid var(--border); border-radius:var(--radius);
+    font-size:14px; color:var(--text); background:var(--cream);
+    outline:none; font-family:inherit;
+    transition:border-color 0.15s, background 0.15s;
+  }
+  .input { height:40px; padding:0 12px; }
+  .textarea { padding:10px 12px; resize:vertical; min-height:100px; line-height:1.6; }
+  .select { height:40px; padding:0 12px; cursor:pointer; }
+  .input:focus, .textarea:focus, .select:focus { border-color:var(--green); background:#fff; }
+  .input.error { border-color:var(--red); }
+
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+  /* 이미지 업로드 */
+  .img-upload-area {
+    border:2px dashed var(--border); border-radius:10px;
+    padding:20px; text-align:center; cursor:pointer;
+    transition:border-color 0.15s, background 0.15s;
+    background:var(--cream);
+  }
+  .img-upload-area:hover { border-color:var(--green-l); background:var(--green-t); }
+  .img-upload-area svg { width:28px; height:28px; stroke:var(--muted); fill:none; stroke-width:1.5; margin-bottom:8px; }
+  .img-upload-area p { font-size:12px; color:var(--muted); line-height:1.5; }
+  .img-upload-area small { font-size:11px; color:var(--border); display:block; margin-top:4px; }
+
+  .img-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+  .img-item { position:relative; aspect-ratio:1; border-radius:8px; overflow:hidden; background:var(--stone); }
+  .img-item img { width:100%; height:100%; object-fit:cover; }
+  .img-item-del {
+    position:absolute; top:4px; right:4px;
+    width:22px; height:22px; border-radius:50%;
+    background:rgba(0,0,0,0.55); border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .img-item-del svg { width:12px; height:12px; stroke:#fff; fill:none; stroke-width:2.5; stroke-linecap:round; }
+  .img-order { position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.5); color:#fff; font-size:9px; padding:1px 5px; border-radius:4px; }
+
+  /* 태그 */
+  .tag-input-wrap { display:flex; gap:8px; }
+  .tag-input-wrap .input { flex:1; }
+  .tag-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .tag-item {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:3px 10px; border-radius:20px;
+    background:var(--green-t); color:var(--green-l);
+    font-size:12px; font-weight:500;
+  }
+  .tag-item button { background:none; border:none; cursor:pointer; color:var(--green-l); font-size:14px; line-height:1; padding:0; display:flex; align-items:center; }
+
+  /* 공개 토글 */
+  .status-group { display:flex; gap:6px; }
+  .status-btn {
+    flex:1; height:36px; border-radius:8px; border:1px solid var(--border);
+    background:var(--cream); color:var(--muted); font-size:12px; font-weight:500;
+    cursor:pointer; font-family:inherit; transition:all 0.15s;
+  }
+  .status-btn.on-published { background:var(--green-t); color:var(--green-l); border-color:var(--green-l); }
+  .status-btn.on-draft     { background:var(--stone);   color:var(--text);    border-color:var(--border); }
+  .status-btn.on-hidden    { background:#FEF3E2;         color:#D97706;        border-color:#D97706; }
+
+  /* 알림 토스트 */
+  .toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    padding:12px 20px; border-radius:10px; font-size:13px; font-weight:500;
+    box-shadow:0 4px 16px rgba(0,0,0,0.12);
+    transform:translateY(80px); opacity:0;
+    transition:transform 0.3s, opacity 0.3s;
+  }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.success { background:var(--green); color:#fff; }
+  .toast.error   { background:var(--red);   color:#fff; }
+
+  /* 삭제 확인 모달 */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.4);
+    display:none; align-items:center; justify-content:center; z-index:100;
+  }
+  .modal-overlay.show { display:flex; }
+  .modal { background:#fff; border-radius:14px; padding:28px; max-width:360px; width:90%; }
+  .modal h3 { font-size:16px; font-weight:600; margin-bottom:8px; }
+  .modal p { font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:20px; }
+  .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h1>강진 여행 가이드</h1>
+      <p>관리자 페이지</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">메뉴</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>대시보드
+      </a>
+      <a href="content-list.html" class="nav-item active">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>콘텐츠 관리
+      </a>
+      <a href="collection-list.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>컬렉션 관리
+      </a>
+      <div class="nav-section" style="margin-top:8px;">설정</div>
+      <a href="settings.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>사이트 설정
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn-logout" onclick="Auth.logout()">로그아웃</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle">콘텐츠 등록</div>
+      <div class="topbar-actions">
+        <button class="btn btn-danger" id="btnDelete" style="display:none;" onclick="confirmDelete()">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          삭제
+        </button>
+        <a href="content-list.html" class="btn btn-secondary">취소</a>
+        <button class="btn btn-primary" id="btnSave" onclick="saveContent()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          저장
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="form-grid">
+
+        <!-- 왼쪽: 메인 폼 -->
+        <div>
+          <!-- 이미지 -->
+          <div class="form-card">
+            <div class="form-card-header">이미지 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 최대 5장, 첫 번째가 대표 이미지</span></div>
+            <div class="form-card-body">
+              <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <p>클릭하여 이미지 선택<br>또는 드라이브 URL 직접 입력</p>
+                <small>Google Drive에 업로드 후 공개 URL을 사용하세요</small>
+              </div>
+              <input type="file" id="imgInput" accept="image/*" multiple style="display:none" onchange="handleImgFile(this)">
+              <div class="img-grid" id="imgGrid"></div>
+
+              <!-- 드라이브 URL 직접 입력 -->
+              <div style="margin-top:12px;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="text" class="input" id="driveUrlInput" placeholder="Google Drive 이미지 URL 붙여넣기" style="flex:1;">
+                  <button class="btn btn-secondary" onclick="addDriveUrl()" style="white-space:nowrap;">추가</button>
+                </div>
+                <p style="font-size:11px;color:var(--muted);margin-top:5px;">Drive → 파일 우클릭 → 공유 → 링크 복사 후 붙여넣기</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 기본 정보 -->
+          <div class="form-card">
+            <div class="form-card-header">기본 정보</div>
+            <div class="form-card-body">
+              <div class="field">
+                <label>카테고리 <span class="req">*</span></label>
+                <select class="select" id="categoryId">
+                  <option value="">선택하세요</option>
+                  <option value="cat_001">🍽️ 식당</option>
+                  <option value="cat_002">☕ 카페</option>
+                  <option value="cat_003">🌿 여행지</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>장소명 <span class="req">*</span></label>
+                <input type="text" class="input" id="title" placeholder="상호명 또는 장소명">
+              </div>
+              <div class="field">
+                <label>한줄 소개 <span class="req">*</span></label>
+                <input type="text" class="input" id="subtitle" placeholder="한 문장으로 매력을 표현해주세요">
+              </div>
+              <div class="field">
+                <label>상세 설명</label>
+                <textarea class="textarea" id="description" placeholder="장소에 대한 상세한 설명을 입력하세요" style="min-height:120px;"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- 위치 정보 -->
+          <div class="form-card">
+            <div class="form-card-header">위치 정보</div>
+            <div class="form-card-body">
+              <div class="field">
+                <label>주소 <span class="req">*</span></label>
+                <input type="text" class="input" id="address" placeholder="전남 강진군 ...">
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>위도 (Latitude)</label>
+                  <input type="text" class="input" id="lat" placeholder="34.6424">
+                </div>
+                <div class="field">
+                  <label>경도 (Longitude)</label>
+                  <input type="text" class="input" id="lng" placeholder="126.7669">
+                </div>
+              </div>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px;">
+                💡 <a href="https://map.kakao.com" target="_blank" style="color:var(--green-l);">카카오맵</a>에서 장소 검색 → 우클릭 → 좌표 복사
+              </p>
+              <div class="field" style="margin-top:12px;">
+                <label>지도 URL (선택)</label>
+                <input type="text" class="input" id="mapUrl" placeholder="카카오맵 또는 네이버지도 공유 URL">
+              </div>
+            </div>
+          </div>
+
+          <!-- 영업 정보 -->
+          <div class="form-card">
+            <div class="form-card-header">영업 정보 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 여행지는 입력 불필요</span></div>
+            <div class="form-card-body">
+              <div class="field">
+                <label>영업시간</label>
+                <input type="text" class="input" id="businessHours" placeholder="예) 11:00 - 21:00 / 브레이크타임 15:00-17:00">
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>휴무일</label>
+                  <input type="text" class="input" id="holiday" placeholder="예) 매주 월요일">
+                </div>
+                <div class="field">
+                  <label>전화번호</label>
+                  <input type="text" class="input" id="phone" placeholder="061-000-0000">
+                </div>
+              </div>
+              <div class="field">
+                <label>주차 안내</label>
+                <input type="text" class="input" id="parking" placeholder="예) 건물 앞 무료주차 5대">
+              </div>
+              <div class="field">
+                <label>권장 소요시간</label>
+                <input type="text" class="input" id="recommendedTime" placeholder="예) 1시간 ~ 1시간 30분">
+              </div>
+            </div>
+          </div>
+
+          <!-- 미디어 -->
+          <div class="form-card">
+            <div class="form-card-header">미디어</div>
+            <div class="form-card-body">
+              <div class="field">
+                <label>유튜브 URL (선택)</label>
+                <input type="text" class="input" id="youtubeUrl" placeholder="https://youtu.be/...">
+              </div>
+              <div id="youtubePreview" style="display:none;margin-top:10px;border-radius:8px;overflow:hidden;">
+                <iframe id="youtubeFrame" width="100%" height="180" frameborder="0" allowfullscreen></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 사이드 옵션 -->
+        <div>
+          <!-- 공개 설정 -->
+          <div class="form-card">
+            <div class="form-card-header">공개 설정</div>
+            <div class="form-card-body">
+              <div class="status-group">
+                <button class="status-btn on-published" id="statusPublished" onclick="setStatus('published')">✅ 공개</button>
+                <button class="status-btn" id="statusDraft" onclick="setStatus('draft')">📝 임시저장</button>
+                <button class="status-btn" id="statusHidden" onclick="setStatus('hidden')">🙈 숨김</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 편집장 픽 -->
+          <div class="form-card">
+            <div class="form-card-header">편집장 픽</div>
+            <div class="form-card-body">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                <input type="checkbox" id="editorPick" style="width:16px;height:16px;accent-color:var(--green);">
+                <span style="font-size:13px;">메인 화면에 추천 노출</span>
+              </label>
+              <p style="font-size:11px;color:var(--muted);margin-top:6px;">체크 시 사용자 메인 화면 "편집장 추천"에 표시됩니다.</p>
+            </div>
+          </div>
+
+          <!-- 태그 -->
+          <div class="form-card">
+            <div class="form-card-header">태그</div>
+            <div class="form-card-body">
+              <div class="tag-input-wrap">
+                <input type="text" class="input" id="tagInput" placeholder="태그 입력 후 Enter" onkeydown="handleTagKey(event)">
+                <button class="btn btn-secondary" onclick="addTag()">추가</button>
+              </div>
+              <div class="tag-list" id="tagList"></div>
+              <div style="margin-top:10px;">
+                <p style="font-size:11px;color:var(--muted);margin-bottom:6px;">자주 쓰는 태그</p>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('늦게까지')">늦게까지</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('혼밥가능')">혼밥가능</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('뷰맛집')">뷰맛집</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('숨은카페')">숨은카페</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('주차가능')">주차가능</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('아이와함께')">아이와함께</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('힐링')">힐링</button>
+                  <button class="btn btn-secondary" style="height:26px;font-size:11px;padding:0 8px;" onclick="addTagDirect('드라이브')">드라이브</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 등록 정보 -->
+          <div class="form-card" id="metaCard" style="display:none;">
+            <div class="form-card-header">등록 정보</div>
+            <div class="form-card-body">
+              <p style="font-size:12px;color:var(--muted);line-height:1.8;">
+                ID: <span id="metaId" style="color:var(--text);"></span><br>
+                등록일: <span id="metaCreated" style="color:var(--text);"></span><br>
+                수정일: <span id="metaUpdated" style="color:var(--text);"></span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>콘텐츠 삭제</h3>
+    <p>이 콘텐츠를 삭제하면 관련 이미지와 태그도 모두 삭제됩니다.<br>삭제 후에는 복구할 수 없습니다.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-danger" onclick="deleteContent()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script>
+Auth.require();
+
+// ── 상태 변수 ──────────────────────────────
+let editId   = null;
+let status   = 'published';
+let tags     = [];
+let images   = []; // {url, altText, isNew}
+
+// ── 초기화 ─────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(location.search);
+  editId       = params.get('id');
+  const cat    = params.get('cat');
+
+  if (cat) document.getElementById('categoryId').value = cat;
+
+  if (editId) {
+    document.getElementById('pageTitle').textContent = '콘텐츠 수정';
+    document.getElementById('btnDelete').style.display = 'flex';
+    document.getElementById('metaCard').style.display = 'block';
+    await loadContent(editId);
+  }
+
+  // 유튜브 URL 입력 시 미리보기
+  document.getElementById('youtubeUrl').addEventListener('input', previewYoutube);
+});
+
+// ── 콘텐츠 불러오기 ────────────────────────
+async function loadContent(id) {
+  try {
+    const res  = await API.getContent(id);
+    const data = res.data;
+
+    document.getElementById('categoryId').value   = data.CategoryID     || '';
+    document.getElementById('title').value         = data.Title          || '';
+    document.getElementById('subtitle').value      = data.Subtitle       || '';
+    document.getElementById('description').value   = data.Description    || '';
+    document.getElementById('address').value       = data.Address        || '';
+    document.getElementById('lat').value           = data.Latitude       || '';
+    document.getElementById('lng').value           = data.Longitude      || '';
+    document.getElementById('mapUrl').value        = data.MapURL         || '';
+    document.getElementById('businessHours').value = data.BusinessHours  || '';
+    document.getElementById('holiday').value       = data.Holiday        || '';
+    document.getElementById('phone').value         = data.Phone          || '';
+    document.getElementById('parking').value       = data.Parking        || '';
+    document.getElementById('recommendedTime').value = data.Recommended_Time || '';
+    document.getElementById('youtubeUrl').value    = data.YoutubeURL     || '';
+    document.getElementById('editorPick').checked  = data.Editor_Pick === true || data.Editor_Pick === 'TRUE';
+
+    setStatus(data.Status || 'published');
+
+    // 태그
+    tags = data.tags || [];
+    renderTags();
+
+    // 이미지
+    images = (data.images || []).map(img => ({
+      imageId : img.ImageID,
+      url     : img.DriveURL,
+      altText : img.AltText || '',
+      isNew   : false,
+    }));
+    renderImages();
+
+    // 유튜브 미리보기
+    previewYoutube();
+
+    // 메타 정보
+    document.getElementById('metaId').textContent      = data.ID;
+    document.getElementById('metaCreated').textContent = formatDate(data.CreatedAt);
+    document.getElementById('metaUpdated').textContent = formatDate(data.UpdatedAt);
+
+  } catch (err) {
+    showToast('콘텐츠를 불러오지 못했습니다.', 'error');
+  }
+}
+
+// ── 저장 ───────────────────────────────────
+async function saveContent() {
+  const btn = document.getElementById('btnSave');
+
+  // 필수값 검증
+  const title      = document.getElementById('title').value.trim();
+  const categoryId = document.getElementById('categoryId').value;
+  const address    = document.getElementById('address').value.trim();
+  const subtitle   = document.getElementById('subtitle').value.trim();
+
+  if (!categoryId) { showToast('카테고리를 선택해주세요.', 'error'); return; }
+  if (!title)      { showToast('장소명을 입력해주세요.', 'error'); return; }
+  if (!subtitle)   { showToast('한줄 소개를 입력해주세요.', 'error'); return; }
+  if (!address)    { showToast('주소를 입력해주세요.', 'error'); return; }
+
+  btn.textContent    = '저장 중...';
+  btn.style.pointerEvents = 'none';
+
+  const data = {
+    ContentType     : 'place',
+    CategoryID      : categoryId,
+    Title           : title,
+    Subtitle        : subtitle,
+    Description     : document.getElementById('description').value.trim(),
+    Address         : address,
+    Latitude        : document.getElementById('lat').value.trim(),
+    Longitude       : document.getElementById('lng').value.trim(),
+    MapURL          : document.getElementById('mapUrl').value.trim(),
+    BusinessHours   : document.getElementById('businessHours').value.trim(),
+    Holiday         : document.getElementById('holiday').value.trim(),
+    Phone           : document.getElementById('phone').value.trim(),
+    Parking         : document.getElementById('parking').value.trim(),
+    Recommended_Time: document.getElementById('recommendedTime').value.trim(),
+    YoutubeURL      : document.getElementById('youtubeUrl').value.trim(),
+    Editor_Pick     : document.getElementById('editorPick').checked,
+    Status          : status,
+    tags,
+  };
+
+  try {
+    let savedId = editId;
+
+    if (editId) {
+      await API.updateContent(editId, data);
+    } else {
+      const res = await API.createContent(data);
+      savedId   = res.id;
+    }
+
+    // 새 이미지 저장
+    const newImages = images.filter(img => img.isNew);
+    for (let i = 0; i < newImages.length; i++) {
+      await API.addImage({
+        ContentID  : savedId,
+        SortOrder  : images.indexOf(newImages[i]) + 1,
+        DriveFileID: '',
+        DriveURL   : newImages[i].url,
+        AltText    : newImages[i].altText || title,
+      });
+    }
+
+    showToast(editId ? '수정되었습니다.' : '등록되었습니다.', 'success');
+    setTimeout(() => { location.href = 'content-list.html'; }, 1000);
+
+  } catch (err) {
+    showToast('저장에 실패했습니다: ' + err.message, 'error');
+    btn.textContent         = '저장';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
+// ── 삭제 ───────────────────────────────────
+function confirmDelete() { document.getElementById('deleteModal').classList.add('show'); }
+function closeModal()    { document.getElementById('deleteModal').classList.remove('show'); }
+
+async function deleteContent() {
+  try {
+    await API.deleteContent(editId);
+    showToast('삭제되었습니다.', 'success');
+    setTimeout(() => { location.href = 'content-list.html'; }, 800);
+  } catch (err) {
+    showToast('삭제에 실패했습니다.', 'error');
+    closeModal();
+  }
+}
+
+// ── 이미지 ─────────────────────────────────
+function handleImgFile(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    if (images.length >= 5) { showToast('이미지는 최대 5장입니다.', 'error'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      images.push({ url: e.target.result, altText: file.name, isNew: true });
+      renderImages();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function addDriveUrl() {
+  const input = document.getElementById('driveUrlInput');
+  const url   = input.value.trim();
+  if (!url) return;
+  if (images.length >= 5) { showToast('이미지는 최대 5장입니다.', 'error'); return; }
+
+  // Drive 공유 URL → 직접 표시 URL로 변환
+  let displayUrl = url;
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) {
+    displayUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  }
+
+  images.push({ url: displayUrl, altText: '', isNew: true });
+  renderImages();
+  input.value = '';
+}
+
+function removeImage(idx) {
+  const img = images[idx];
+  if (img.imageId) {
+    // 기존 이미지 → API 삭제
+    API.deleteImage(img.imageId)
+      .then(() => { images.splice(idx, 1); renderImages(); })
+      .catch(() => showToast('이미지 삭제에 실패했습니다.', 'error'));
+  } else {
+    images.splice(idx, 1);
+    renderImages();
+  }
+}
+
+function renderImages() {
+  const grid = document.getElementById('imgGrid');
+  grid.innerHTML = images.map((img, i) => `
+    <div class="img-item">
+      <img src="${img.url}" alt="${img.altText}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23eee%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2212%22 fill=%22%23aaa%22>오류</text></svg>'">
+      <button class="img-item-del" onclick="removeImage(${i})">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="img-order">${i + 1}</span>
+    </div>
+  `).join('');
+}
+
+// ── 태그 ───────────────────────────────────
+function handleTagKey(e) { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }
+
+function addTag() {
+  const input = document.getElementById('tagInput');
+  const val   = input.value.trim().replace(/^#/, '');
+  if (!val || tags.includes(val)) { input.value = ''; return; }
+  tags.push(val);
+  renderTags();
+  input.value = '';
+}
+
+function addTagDirect(val) {
+  if (!tags.includes(val)) { tags.push(val); renderTags(); }
+}
+
+function removeTag(idx) { tags.splice(idx, 1); renderTags(); }
+
+function renderTags() {
+  document.getElementById('tagList').innerHTML = tags.map((t, i) =>
+    `<span class="tag-item">#${t}<button onclick="removeTag(${i})">×</button></span>`
+  ).join('');
+}
+
+// ── 상태 ───────────────────────────────────
+function setStatus(val) {
+  status = val;
+  ['published','draft','hidden'].forEach(s => {
+    const btn = document.getElementById('status' + s.charAt(0).toUpperCase() + s.slice(1));
+    btn.className = 'status-btn' + (s === val ? ` on-${s}` : '');
+  });
+}
+
+// ── 유튜브 미리보기 ─────────────────────────
+function previewYoutube() {
+  const url   = document.getElementById('youtubeUrl').value.trim();
+  const prev  = document.getElementById('youtubePreview');
+  const frame = document.getElementById('youtubeFrame');
+  const match = url.match(/(?:youtu\.be\/|v=)([a-zA-Z0-9_-]{11})/);
+  if (match) {
+    frame.src        = `https://www.youtube.com/embed/${match[1]}`;
+    prev.style.display = 'block';
+  } else {
+    prev.style.display = 'none';
+    frame.src          = '';
+  }
+}
+
+// ── 유틸 ───────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = `toast ${type}`;
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function formatDate(iso) {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString('ko-KR', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+</script>
+</body>
+</html>

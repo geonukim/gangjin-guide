@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사이트 설정 — 강진 여행 가이드 관리자</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--green:#2B3D2C;--green-l:#4A6B4C;--green-t:#EBF1E8;--cream:#FAF8F4;--stone:#F0EDE8;--border:#E5DDD5;--text:#1C1814;--muted:#9C8B78;--red:#E05C5C;--radius:10px;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+  .layout{display:flex;min-height:100vh;}
+  .sidebar{width:220px;background:var(--green);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;}
+  .sidebar-brand{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.1);}
+  .sidebar-brand h1{font-size:14px;font-weight:600;color:#fff;line-height:1.4;}
+  .sidebar-brand p{font-size:10px;color:rgba(255,255,255,0.5);margin-top:3px;}
+  .sidebar-nav{padding:12px 0;flex:1;}
+  .nav-section{padding:8px 20px 4px;font-size:9px;letter-spacing:1.5px;color:rgba(255,255,255,0.35);}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;color:rgba(255,255,255,0.75);text-decoration:none;transition:background 0.15s;}
+  .nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+  .nav-item.active{background:rgba(255,255,255,0.12);color:#fff;font-weight:500;}
+  .nav-item svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.1);}
+  .btn-logout{width:100%;padding:8px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);font-size:12px;cursor:pointer;font-family:inherit;}
+  .main{margin-left:220px;flex:1;}
+  .topbar{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10;}
+  .topbar-title{font-size:16px;font-weight:600;letter-spacing:-0.3px;}
+  .btn{height:34px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:none;display:inline-flex;align-items:center;gap:6px;transition:background 0.15s;}
+  .btn-primary{background:var(--green);color:#fff;}
+  .btn-primary:hover{background:var(--green-l);}
+  .content{padding:28px;max-width:640px;}
+  .form-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+  .form-card-header{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;}
+  .form-card-body{padding:20px;}
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;}
+  .field small{display:block;font-size:11px;color:var(--muted);margin-top:4px;}
+  .input{width:100%;height:40px;border:1px solid var(--border);border-radius:var(--radius);padding:0 12px;font-size:14px;color:var(--text);background:var(--cream);outline:none;font-family:inherit;transition:border-color 0.15s;}
+  .input:focus{border-color:var(--green);background:#fff;}
+  .input-pw{position:relative;}
+  .input-pw input{padding-right:40px;}
+  .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,0.12);transform:translateY(80px);opacity:0;transition:transform 0.3s,opacity 0.3s;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.success{background:var(--green);color:#fff;}
+  .toast.error{background:var(--red);color:#fff;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><h1>강진 여행 가이드</h1><p>관리자 페이지</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">메뉴</div>
+      <a href="dashboard.html" class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>대시보드</a>
+      <a href="content-list.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>콘텐츠 관리</a>
+      <a href="collection-list.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>컬렉션 관리</a>
+      <div class="nav-section" style="margin-top:8px;">설정</div>
+      <a href="settings.html" class="nav-item active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>사이트 설정</a>
+    </nav>
+    <div class="sidebar-bottom"><button class="btn-logout" onclick="Auth.logout()">로그아웃</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title">사이트 설정</div>
+      <button class="btn btn-primary" onclick="saveSettings()">저장</button>
+    </div>
+    <div class="content">
+
+      <!-- 사이트 기본 정보 -->
+      <div class="form-card">
+        <div class="form-card-header">사이트 기본 정보</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>사이트 제목</label>
+            <input type="text" class="input" id="site_title" placeholder="강진 여행 가이드">
+          </div>
+          <div class="field">
+            <label>사이트 부제목</label>
+            <input type="text" class="input" id="site_subtitle" placeholder="설렘이 머무는 곳">
+          </div>
+          <div class="field">
+            <label>메인 화면 텍스트</label>
+            <input type="text" class="input" id="hero_text" placeholder="천천히, 강진을 느껴보세요">
+          </div>
+          <div class="field">
+            <label>메인 히어로 이미지 URL</label>
+            <input type="text" class="input" id="hero_image" placeholder="Google Drive 공개 URL">
+            <small>Drive에서 이미지 공유 링크 → uc?export=view&id= 형식으로 입력</small>
+          </div>
+          <div class="field">
+            <label>문의 이메일</label>
+            <input type="text" class="input" id="contact_email" placeholder="gangjin@example.com">
+          </div>
+        </div>
+      </div>
+
+      <!-- 비밀번호 변경 -->
+      <div class="form-card">
+        <div class="form-card-header">관리자 비밀번호 변경</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>새 비밀번호</label>
+            <input type="password" class="input" id="newPw" placeholder="새 비밀번호 입력 (4자 이상)">
+          </div>
+          <div class="field">
+            <label>새 비밀번호 확인</label>
+            <input type="password" class="input" id="newPwConfirm" placeholder="비밀번호 재입력">
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()" style="margin-top:4px;">비밀번호 변경</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script>
+Auth.require();
+
+async function loadSettings() {
+  try {
+    const res  = await API.getSettings();
+    const data = res.data || {};
+    ['site_title','site_subtitle','hero_text','hero_image','contact_email'].forEach(key => {
+      const el = document.getElementById(key);
+      if (el && data[key]) el.value = data[key];
+    });
+  } catch(e) { showToast('설정을 불러오지 못했습니다.', 'error'); }
+}
+
+async function saveSettings() {
+  const data = {};
+  ['site_title','site_subtitle','hero_text','hero_image','contact_email'].forEach(key => {
+    const el = document.getElementById(key);
+    if (el) data[key] = el.value.trim();
+  });
+  try {
+    await API.updateSettings(data);
+    showToast('설정이 저장되었습니다.', 'success');
+  } catch(e) { showToast('저장에 실패했습니다.', 'error'); }
+}
+
+async function changePassword() {
+  const pw  = document.getElementById('newPw').value;
+  const pw2 = document.getElementById('newPwConfirm').value;
+  if (!pw || pw.length < 4) { showToast('비밀번호는 4자 이상이어야 합니다.', 'error'); return; }
+  if (pw !== pw2)            { showToast('비밀번호가 일치하지 않습니다.', 'error'); return; }
+  try {
+    await API.changePassword(pw);
+    Auth.login(pw); // 세션 비밀번호 업데이트
+    showToast('비밀번호가 변경되었습니다.', 'success');
+    document.getElementById('newPw').value = '';
+    document.getElementById('newPwConfirm').value = '';
+  } catch(e) { showToast('변경에 실패했습니다.', 'error'); }
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = `toast ${type}`;
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+loadSettings();
+</script>
+</body>
+</html>
