@@ -1,15 +1,17 @@
 /**
  * 강진 여행 가이드 - 설정 파일
- * 
- * ⚠️ Apps Script 배포 URL을 아래에 입력하세요.
- * 이 파일만 수정하면 모든 페이지에 자동 적용됩니다.
+ * ⚠️ Apps Script 배포 URL과 관리자 비밀번호를 입력하세요.
  */
 
 const CONFIG = {
-  // Apps Script 배포 URL (끝에 /exec 포함)
+  // Apps Script 배포 URL
   API_URL: 'https://script.google.com/macros/s/AKfycbywKVHVslokEbxE0D-oOrVmfCXGFlBAsjzARHWH_RhH147q1w54Tdj75SOWtGDeoCHrgA/exec',
 
-  // 세션 키 (변경 불필요)
-  SESSION_KEY: 'gangjin_admin',
+  // 관리자 비밀번호 (로그인 시 브라우저에서 직접 비교)
+  // ⚠️ 비밀번호 변경 시 여기도 함께 수정하세요
+  ADMIN_PASSWORD: '1234',
+
+  // 세션 키
+  SESSION_KEY   : 'gangjin_admin',
   SESSION_PW_KEY: 'gangjin_admin_pw',
 };
