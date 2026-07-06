@@ -199,21 +199,28 @@
           <div class="form-card">
             <div class="form-card-header">이미지 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 최대 5장, 첫 번째가 대표 이미지</span></div>
             <div class="form-card-body">
-              <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
-                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <p>클릭하여 이미지 선택<br>또는 드라이브 URL 직접 입력</p>
-                <small>Google Drive에 업로드 후 공개 URL을 사용하세요</small>
+              <!-- Drive URL 입력 안내 -->
+              <div style="background:var(--green-t);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+                <p style="font-size:12px;color:var(--green-l);font-weight:500;margin-bottom:6px;">📌 이미지 등록 방법</p>
+                <ol style="font-size:11px;color:var(--green-l);line-height:1.9;padding-left:16px;">
+                  <li>Google Drive에 이미지 업로드</li>
+                  <li>파일 우클릭 → "공유" 클릭</li>
+                  <li>"링크가 있는 모든 사용자" 선택</li>
+                  <li>"링크 복사" 후 아래에 붙여넣기</li>
+                </ol>
               </div>
-              <input type="file" id="imgInput" accept="image/*" multiple style="display:none" onchange="handleImgFile(this)">
+
               <div class="img-grid" id="imgGrid"></div>
 
-              <!-- 드라이브 URL 직접 입력 -->
-              <div style="margin-top:12px;">
+              <!-- Drive URL 입력 -->
+              <div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <input type="text" class="input" id="driveUrlInput" placeholder="Google Drive 이미지 URL 붙여넣기" style="flex:1;">
+                  <input type="text" class="input" id="driveUrlInput" placeholder="Google Drive 공유 URL 붙여넣기" style="flex:1;">
                   <button class="btn btn-secondary" onclick="addDriveUrl()" style="white-space:nowrap;">추가</button>
                 </div>
-                <p style="font-size:11px;color:var(--muted);margin-top:5px;">Drive → 파일 우클릭 → 공유 → 링크 복사 후 붙여넣기</p>
+                <p style="font-size:11px;color:var(--muted);margin-top:5px;">
+                  예) https://drive.google.com/file/d/xxxxx/view?usp=sharing
+                </p>
               </div>
             </div>
           </div>
@@ -570,29 +577,17 @@ async function deleteContent() {
 }
 
 // ── 이미지 ─────────────────────────────────
-function handleImgFile(input) {
-  const files = Array.from(input.files);
-  files.forEach(file => {
-    if (images.length >= 5) { showToast('이미지는 최대 5장입니다.', 'error'); return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      images.push({ url: e.target.result, altText: file.name, isNew: true });
-      renderImages();
-    };
-    reader.readAsDataURL(file);
-  });
-  input.value = '';
-}
-
 function addDriveUrl() {
   const input = document.getElementById('driveUrlInput');
   const url   = input.value.trim();
-  if (!url) return;
+  if (!url) { showToast('URL을 입력해주세요.', 'error'); return; }
   if (images.length >= 5) { showToast('이미지는 최대 5장입니다.', 'error'); return; }
 
   // Drive 공유 URL → 직접 표시 URL로 변환
+  // 형식 1: https://drive.google.com/file/d/FILE_ID/view
+  // 형식 2: https://drive.google.com/open?id=FILE_ID
   let displayUrl = url;
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
   if (match) {
     displayUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
   }
@@ -600,6 +595,7 @@ function addDriveUrl() {
   images.push({ url: displayUrl, altText: '', isNew: true });
   renderImages();
   input.value = '';
+  showToast('이미지가 추가되었습니다.', 'success');
 }
 
 function removeImage(idx) {
