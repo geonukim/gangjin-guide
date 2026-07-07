@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 로그인 — 강진 여행 가이드</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--green:#2B3D2C;--green-l:#4A6B4C;--green-t:#EBF1E8;--cream:#FAF8F4;--stone:#F0EDE8;--border:#E5DDD5;--text:#1C1814;--muted:#9C8B78;--red:#E05C5C;--radius:10px;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--stone);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+  .wrap{width:100%;max-width:360px;}
+  .brand{text-align:center;margin-bottom:2rem;}
+  .brand-icon{width:56px;height:56px;background:var(--green);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+  .brand-icon svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .brand h1{font-size:18px;font-weight:600;color:var(--text);letter-spacing:-0.3px;}
+  .brand p{font-size:12px;color:var(--muted);margin-top:4px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px 24px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;}
+  .input-wrap{position:relative;}
+  .input-wrap input{width:100%;height:44px;border:1px solid var(--border);border-radius:var(--radius);padding:0 40px 0 14px;font-size:15px;color:var(--text);background:var(--cream);outline:none;font-family:inherit;transition:border-color 0.15s,background 0.15s;}
+  .input-wrap input:focus{border-color:var(--green);background:#fff;}
+  .input-wrap input.error{border-color:var(--red);background:#FFF8F8;}
+  .toggle-pw{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);display:flex;align-items:center;}
+  .toggle-pw svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .error-msg{font-size:11px;color:var(--red);margin-top:5px;display:none;}
+  .error-msg.show{display:block;}
+  .btn-login{width:100%;height:46px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.15s,transform 0.1s;margin-top:4px;}
+  .btn-login:hover{background:var(--green-l);}
+  .btn-login:active{transform:scale(0.98);}
+  .btn-login.loading{background:var(--green-t);color:var(--green-l);pointer-events:none;}
+  .footer{text-align:center;margin-top:20px;font-size:11px;color:var(--muted);}
+  .shake{animation:shake 0.35s ease;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    </div>
+    <h1>강진 여행 가이드</h1>
+    <p>관리자 페이지</p>
+  </div>
+
+  <div class="card" id="loginCard">
+    <div class="field">
+      <label for="password">비밀번호</label>
+      <div class="input-wrap">
+        <input type="password" id="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password"/>
+        <button class="toggle-pw" type="button" id="togglePw">
+          <svg id="eyeIcon" viewBox="0 0 24 24">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <div class="error-msg" id="errorMsg">비밀번호가 올바르지 않습니다.</div>
+    </div>
+    <button class="btn-login" id="loginBtn" type="button">로그인</button>
+  </div>
+
+  <div class="footer">강진군 치유관광 · 관리자 전용</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // 이미 로그인된 경우 대시보드로
+  if (Auth.isLoggedIn()) window.location.href = 'dashboard.html';
+
+  const input     = document.getElementById('password');
+  const btn       = document.getElementById('loginBtn');
+  const errMsg    = document.getElementById('errorMsg');
+  const toggleBtn = document.getElementById('togglePw');
+  const eyeIcon   = document.getElementById('eyeIcon');
+  const card      = document.getElementById('loginCard');
+
+  // 비밀번호 표시/숨김
+  toggleBtn.addEventListener('click', () => {
+    const isText = input.type === 'text';
+    input.type   = isText ? 'password' : 'text';
+    eyeIcon.innerHTML = isText
+      ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+      : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  });
+
+  function showError() {
+    input.classList.add('error');
+    errMsg.classList.add('show');
+    card.classList.add('shake');
+    card.addEventListener('animationend', () => card.classList.remove('shake'), { once: true });
+  }
+
+  function clearError() {
+    input.classList.remove('error');
+    errMsg.classList.remove('show');
+  }
+
+  // 로그인 — Apps Script 호출 없이 브라우저에서 직접 비교
+  function login() {
+    const pw = input.value.trim();
+    if (!pw) { showError(); return; }
+
+    btn.classList.add('loading');
+    btn.textContent = '확인 중...';
+
+    setTimeout(() => {
+      if (pw === CONFIG.ADMIN_PASSWORD) {
+        // 로그인 성공
+        Auth.login(pw);
+        btn.textContent = '로그인 중...';
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 300);
+      } else {
+        // 로그인 실패
+        btn.classList.remove('loading');
+        btn.textContent = '로그인';
+        showError();
+        input.value = '';
+        input.focus();
+      }
+    }, 400);
+  }
+
+  btn.addEventListener('click', login);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  input.addEventListener('input', clearError);
+</script>
+</body>
+</html>

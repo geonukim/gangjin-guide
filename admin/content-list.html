@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>콘텐츠 관리 — 강진 여행 가이드 관리자</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--green:#2B3D2C;--green-l:#4A6B4C;--green-t:#EBF1E8;--cream:#FAF8F4;--stone:#F0EDE8;--border:#E5DDD5;--text:#1C1814;--muted:#9C8B78;--red:#E05C5C;--radius:10px;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+  .layout{display:flex;min-height:100vh;}
+  .sidebar{width:220px;background:var(--green);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;}
+  .sidebar-brand{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.1);}
+  .sidebar-brand h1{font-size:14px;font-weight:600;color:#fff;letter-spacing:-0.2px;line-height:1.4;}
+  .sidebar-brand p{font-size:10px;color:rgba(255,255,255,0.5);margin-top:3px;}
+  .sidebar-nav{padding:12px 0;flex:1;}
+  .nav-section{padding:8px 20px 4px;font-size:9px;letter-spacing:1.5px;color:rgba(255,255,255,0.35);}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;color:rgba(255,255,255,0.75);text-decoration:none;transition:background 0.15s;}
+  .nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+  .nav-item.active{background:rgba(255,255,255,0.12);color:#fff;font-weight:500;}
+  .nav-item svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.1);}
+  .btn-logout{width:100%;padding:8px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);font-size:12px;cursor:pointer;font-family:inherit;}
+  .btn-logout:hover{background:rgba(255,255,255,0.15);color:#fff;}
+  .main{margin-left:220px;flex:1;}
+  .topbar{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10;}
+  .topbar-title{font-size:16px;font-weight:600;letter-spacing:-0.3px;}
+  .btn{height:34px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:none;display:inline-flex;align-items:center;gap:6px;transition:background 0.15s;text-decoration:none;}
+  .btn-primary{background:var(--green);color:#fff;}
+  .btn-primary:hover{background:var(--green-l);}
+  .btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+  .content{padding:24px 28px;}
+
+  /* 필터 바 */
+  .filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filter-chip{height:32px;padding:0 14px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit;transition:all 0.15s;}
+  .filter-chip.active{background:var(--green);color:#fff;border-color:var(--green);}
+  .search-input{height:36px;border:1px solid var(--border);border-radius:var(--radius);padding:0 12px;font-size:13px;font-family:inherit;outline:none;background:#fff;min-width:200px;}
+  .search-input:focus{border-color:var(--green);}
+
+  /* 테이블 */
+  .table-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .table{width:100%;border-collapse:collapse;}
+  .table th{padding:10px 16px;text-align:left;font-size:11px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);background:var(--cream);letter-spacing:0.3px;}
+  .table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+  .table tr:last-child td{border-bottom:none;}
+  .table tr:hover td{background:var(--cream);}
+  .table tr{cursor:pointer;}
+
+  .thumb{width:40px;height:40px;border-radius:8px;object-fit:cover;background:var(--stone);flex-shrink:0;}
+  .thumb-placeholder{width:40px;height:40px;border-radius:8px;background:var(--stone);display:flex;align-items:center;justify-content:center;font-size:18px;}
+
+  .name-cell{display:flex;align-items:center;gap:10px;}
+  .name-text strong{display:block;font-size:13px;font-weight:500;color:var(--text);}
+  .name-text span{font-size:11px;color:var(--muted);}
+
+  .badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;white-space:nowrap;}
+  .badge-published{background:var(--green-t);color:var(--green-l);}
+  .badge-draft{background:var(--stone);color:var(--muted);}
+  .badge-hidden{background:#FEF3E2;color:#D97706;}
+
+  .tag-mini{display:inline-block;padding:1px 6px;border-radius:4px;background:var(--green-t);color:var(--green-l);font-size:10px;margin-right:3px;}
+
+  .empty{padding:60px 20px;text-align:center;color:var(--muted);}
+  .empty p{font-size:14px;margin-bottom:8px;}
+  .empty small{font-size:12px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><h1>강진 여행 가이드</h1><p>관리자 페이지</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">메뉴</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>대시보드
+      </a>
+      <a href="content-list.html" class="nav-item active">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>콘텐츠 관리
+      </a>
+      <a href="collection-list.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>컬렉션 관리
+      </a>
+      <div class="nav-section" style="margin-top:8px;">설정</div>
+      <a href="settings.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>사이트 설정
+      </a>
+    </nav>
+    <div class="sidebar-bottom"><button class="btn-logout" onclick="Auth.logout()">로그아웃</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title">콘텐츠 관리</div>
+      <a href="content-edit.html" class="btn btn-primary">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>새 콘텐츠 등록
+      </a>
+    </div>
+
+    <div class="content">
+      <div class="filter-bar">
+        <button class="filter-chip active" onclick="setFilter('')">전체 <span id="cntAll"></span></button>
+        <button class="filter-chip" onclick="setFilter('cat_001')">🍽️ 식당 <span id="cntR"></span></button>
+        <button class="filter-chip" onclick="setFilter('cat_002')">☕ 카페 <span id="cntC"></span></button>
+        <button class="filter-chip" onclick="setFilter('cat_003')">🌿 여행지 <span id="cntS"></span></button>
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 장소명 검색" oninput="renderTable()">
+      </div>
+
+      <div class="table-card">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:44px;"></th>
+              <th>장소명</th>
+              <th>카테고리</th>
+              <th>태그</th>
+              <th>상태</th>
+              <th>등록일</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="6" class="empty"><p>불러오는 중...</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script>
+Auth.require();
+
+const CAT = { cat_001:'🍽️ 식당', cat_002:'☕ 카페', cat_003:'🌿 여행지', cat_004:'🗺️ 추천코스' };
+const STATUS = { published:{text:'공개',cls:'badge-published'}, draft:{text:'임시저장',cls:'badge-draft'}, hidden:{text:'숨김',cls:'badge-hidden'} };
+
+let allData   = [];
+let allImages = [];
+let allTags   = [];
+let curFilter = '';
+
+async function load() {
+  try {
+    const res  = await API.adminGetAll();
+    allData    = res.data?.contents  || [];
+    allImages  = res.data?.images    || [];
+    allTags    = res.data?.tags      || [];
+
+    // 카운트
+    document.getElementById('cntAll').textContent = `(${allData.length})`;
+    document.getElementById('cntR').textContent   = `(${allData.filter(d=>d.CategoryID==='cat_001').length})`;
+    document.getElementById('cntC').textContent   = `(${allData.filter(d=>d.CategoryID==='cat_002').length})`;
+    document.getElementById('cntS').textContent   = `(${allData.filter(d=>d.CategoryID==='cat_003').length})`;
+
+    renderTable();
+  } catch(e) {
+    document.getElementById('tableBody').innerHTML =
+      `<tr><td colspan="6" class="empty"><p>데이터를 불러오지 못했습니다.</p><small>${e.message}</small></td></tr>`;
+  }
+}
+
+function setFilter(cat) {
+  curFilter = cat;
+  document.querySelectorAll('.filter-chip').forEach((el,i) => {
+    const cats = ['','cat_001','cat_002','cat_003'];
+    el.classList.toggle('active', cats[i] === cat);
+  });
+  renderTable();
+}
+
+function renderTable() {
+  const q    = document.getElementById('searchInput').value.trim().toLowerCase();
+  let rows   = allData;
+  if (curFilter) rows = rows.filter(r => r.CategoryID === curFilter);
+  if (q)         rows = rows.filter(r => (r.Title||'').toLowerCase().includes(q));
+  rows = rows.sort((a,b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+
+  if (!rows.length) {
+    document.getElementById('tableBody').innerHTML =
+      `<tr><td colspan="6" class="empty"><p>등록된 콘텐츠가 없습니다.</p><small>새 콘텐츠를 등록해보세요.</small></td></tr>`;
+    return;
+  }
+
+  document.getElementById('tableBody').innerHTML = rows.map(row => {
+    const thumb  = allImages.filter(img=>img.ContentID===row.ID).sort((a,b)=>a.SortOrder-b.SortOrder)[0];
+    const tags   = allTags.filter(t=>t.ContentID===row.ID).slice(0,3).map(t=>`<span class="tag-mini">#${t.TagName}</span>`).join('');
+    const status = STATUS[row.Status] || STATUS.draft;
+    const date   = row.CreatedAt ? new Date(row.CreatedAt).toLocaleDateString('ko-KR') : '-';
+
+    return `
+      <tr onclick="location.href='content-edit.html?id=${row.ID}'">
+        <td>
+          ${thumb
+            ? `<img class="thumb" src="${thumb.DriveURL}" alt="${row.Title}">`
+            : `<div class="thumb-placeholder">${(CAT[row.CategoryID]||'📍').charAt(0)}</div>`
+          }
+        </td>
+        <td>
+          <div class="name-cell">
+            <div class="name-text">
+              <strong>${row.Title||'제목없음'}</strong>
+              <span>${row.Subtitle||''}</span>
+            </div>
+          </div>
+        </td>
+        <td>${CAT[row.CategoryID]||row.CategoryID}</td>
+        <td>${tags||'<span style="color:var(--muted);font-size:11px;">없음</span>'}</td>
+        <td><span class="badge ${status.cls}">${status.text}</span></td>
+        <td style="color:var(--muted);">${date}</td>
+      </tr>`;
+  }).join('');
+}
+
+load();
+</script>
+</body>
+</html>

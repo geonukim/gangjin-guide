@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>탐색 — 강진 여행 가이드</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .filter-btn{width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .filter-btn svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:1.8;}
+  .filter-btn.active{background:var(--green-t);border-color:var(--green-l);}
+  .tag-pick{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);font-size:12.5px;font-weight:600;margin:0 8px 8px 0;cursor:pointer;background:#fff;color:var(--muted);}
+  .tag-pick.active{background:var(--green);color:#fff;border-color:var(--green);}
+  .result-count{font-size:12px;color:var(--muted);padding:0 16px 8px;}
+</style>
+</head>
+<body>
+
+<div class="app-shell" id="appShell">
+
+  <header class="app-header solid">
+    <button class="icon-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div>
+      <div class="header-title" id="pageTitle">탐색</div>
+      <div class="header-sub" id="pageSub"></div>
+    </div>
+  </header>
+
+  <div class="search-bar" style="margin-top:2px;">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+    <input id="searchInput" type="text" placeholder="장소명, 태그로 검색" />
+  </div>
+
+  <div class="chip-row" id="categoryChips"></div>
+
+  <div class="sub-toolbar">
+    <div class="seg" id="sortSeg">
+      <button data-sort="latest" class="active">최신순</button>
+      <button data-sort="pick">추천순</button>
+      <button data-sort="near">가까운순</button>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="filter-btn" id="tagFilterBtn" onclick="openTagSheet()">
+        <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      </button>
+      <div class="seg" id="viewSeg">
+        <button data-view="list" class="active">목록</button>
+        <button data-view="map">지도</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-count" id="resultCount"></div>
+
+  <div id="listArea" class="list-rows">
+    <div style="padding:40px 0;text-align:center;color:var(--muted);font-size:13px;">불러오는 중...</div>
+  </div>
+
+  <div id="mapArea" style="display:none;">
+    <div id="mapCanvas" class="map-view-canvas"></div>
+  </div>
+
+</div>
+
+<div class="map-pin-card" id="mapPinCard"></div>
+<div id="bottomNavRoot"></div>
+
+<!-- 태그 필터 시트 -->
+<div class="sheet-overlay" id="tagSheetOverlay" onclick="if(event.target===this)closeTagSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>태그로 찾기</h3>
+    <div id="tagPickWrap"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="closeTagSheet()">적용하기</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/util.js"></script>
+<script>
+let allContents   = [];
+let categories    = [];
+let activeCat     = qs('cat') || '';
+let activeQuery   = qs('q') || '';
+let activeSort    = 'latest';
+let activeView    = qs('view') === 'map' ? 'map' : 'list';
+let activeTags    = [];
+let userLoc       = null;
+let mapInstance   = null;
+let savedMode     = qs('view') === 'saved';
+
+function syncNav() { renderBottomNav(savedMode ? 'saved' : (activeView === 'map' ? 'map' : 'explore')); }
+syncNav();
+
+function goBack() {
+  if (document.referrer && document.referrer.includes(location.host)) history.back();
+  else location.href = 'index.html';
+}
+
+async function init() {
+  const res = await API.getContents();
+  const norm = normalizeContents(res);
+  allContents = attachTags(attachThumbs(norm.contents, norm.images), norm.tags)
+    .filter(c => (c.Status || 'published') === 'published');
+
+  try {
+    const catRes = await API.getCategories();
+    const d = catRes?.data;
+    categories = Array.isArray(d) ? d : (d?.categories || []);
+  } catch { categories = []; }
+  if (!categories.length) {
+    categories = Object.entries(CONFIG.CATEGORY_FALLBACK).map(([id, v]) => ({ CategoryID: id, Name: v.name, Icon: v.icon }));
+  }
+
+  renderCategoryChips();
+  updateHeader();
+
+  if (savedMode) document.getElementById('categoryChips').style.display = 'none';
+
+  if (activeView === 'map') switchView('map');
+  else render();
+}
+
+function renderCategoryChips() {
+  const wrap = document.getElementById('categoryChips');
+  const all = [{ CategoryID: '', Name: '전체', Icon: '' }, ...categories];
+  wrap.innerHTML = all.map(c => {
+    const id = c.CategoryID || c.ID || '';
+    const meta = id ? categoryMeta(id, categories) : { name: '전체', icon: '' };
+    return `<button class="chip ${activeCat === id ? 'active' : ''}" data-cat="${id}">${meta.icon ? meta.icon + ' ' : ''}${meta.name}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.chip').forEach(btn => {
+    btn.onclick = () => {
+      activeCat = btn.dataset.cat;
+      wrap.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b === btn));
+      updateHeader();
+      render();
+    };
+  });
+}
+
+function updateHeader() {
+  const title = document.getElementById('pageTitle');
+  const sub   = document.getElementById('pageSub');
+  if (savedMode)          { title.textContent = '저장한 곳'; sub.textContent = '내가 저장한 장소'; }
+  else if (activeQuery)   { title.textContent = `"${activeQuery}" 검색결과`; sub.textContent = ''; }
+  else if (activeCat)     { const m = categoryMeta(activeCat, categories); title.textContent = m.name; sub.textContent = ''; }
+  else                     { title.textContent = '탐색'; sub.textContent = '강진의 모든 장소'; }
+}
+
+document.getElementById('searchInput').value = activeQuery;
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    activeQuery = e.target.value.trim();
+    savedMode = false;
+    document.getElementById('categoryChips').style.display = '';
+    updateHeader();
+    syncNav();
+    render();
+  }
+});
+
+document.getElementById('sortSeg').addEventListener('click', async e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('#sortSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  activeSort = btn.dataset.sort;
+  if (activeSort === 'near' && !userLoc) {
+    showToast('내 위치를 확인하는 중...');
+    userLoc = await getUserLocation();
+    if (!userLoc) { showToast('위치 정보를 가져오지 못했어요'); }
+  }
+  render();
+});
+
+document.getElementById('viewSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  switchView(btn.dataset.view);
+});
+
+function switchView(view) {
+  activeView = view;
+  document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.getElementById('listArea').style.display = view === 'list' ? '' : 'none';
+  document.getElementById('mapArea').style.display   = view === 'map'  ? '' : 'none';
+  document.getElementById('mapPinCard').classList.remove('show');
+  syncNav();
+  if (view === 'map') render();
+}
+
+function getFiltered() {
+  let rows = allContents;
+  if (savedMode)   rows = rows.filter(c => Bookmarks.has(c.ID));
+  if (activeCat)   rows = rows.filter(c => c.CategoryID === activeCat);
+  if (activeTags.length) rows = rows.filter(c => activeTags.every(t => (c.tags || []).includes(t)));
+  if (activeQuery) {
+    const q = activeQuery.toLowerCase();
+    rows = rows.filter(c =>
+      (c.Title || '').toLowerCase().includes(q) ||
+      (c.Subtitle || '').toLowerCase().includes(q) ||
+      (c.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
+
+  if (activeSort === 'pick') {
+    rows = [...rows].sort((a, b) => (b.Editor_Pick === true || b.Editor_Pick === 'TRUE' ? 1 : 0) - (a.Editor_Pick === true || a.Editor_Pick === 'TRUE' ? 1 : 0));
+  } else if (activeSort === 'near' && userLoc) {
+    rows = [...rows].sort((a, b) =>
+      haversineKm(userLoc.lat, userLoc.lng, parseFloat(a.Latitude), parseFloat(a.Longitude)) -
+      haversineKm(userLoc.lat, userLoc.lng, parseFloat(b.Latitude), parseFloat(b.Longitude))
+    );
+  } else {
+    rows = [...rows].sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
+  }
+  return rows;
+}
+
+function render() {
+  const rows = getFiltered();
+  document.getElementById('resultCount').textContent = `${rows.length}곳`;
+
+  if (activeView === 'list') {
+    const area = document.getElementById('listArea');
+    if (!rows.length) {
+      area.innerHTML = `<div class="empty-state"><div class="glyph">🌿</div><p>${savedMode ? '아직 저장한 곳이 없어요.<br>마음에 드는 장소를 하트로 저장해보세요.' : '조건에 맞는 장소가 없어요.'}</p></div>`;
+      return;
+    }
+    area.innerHTML = rows.map(listRowHTML).join('');
+  } else {
+    // Leaflet은 같은 컨테이너에 지도를 두 번 생성하면 오류가 나므로 매번 초기화
+    if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+    const canvas = document.getElementById('mapCanvas');
+    canvas.innerHTML = '';
+    document.getElementById('mapPinCard').classList.remove('show');
+    renderMultiMap('mapCanvas', rows, {
+      route: false,
+      onPinClick: (p) => showMapPinCard(p),
+    }).then(m => { mapInstance = m; });
+  }
+}
+
+function listRowHTML(c) {
+  const thumb = firstThumb(c);
+  const meta  = categoryMeta(c.CategoryID, categories);
+  const tags  = (c.tags || []).slice(0, 2).map(t => `<span class="tag-mini">#${t}</span>`).join('');
+  return `
+    <div class="list-row" onclick="location.href='detail.html?id=${c.ID}'">
+      <div class="thumb">
+        ${thumb ? `<img src="${thumb}" alt="${c.Title || ''}">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:22px;">${meta.icon}</div>`}
+      </div>
+      <div class="body">
+        <div class="top-line">
+          <span class="name">${c.Title || '제목없음'}</span>
+        </div>
+        <div class="area">${meta.name}${c.Recommended_Time ? ' · ' + c.Recommended_Time : ''}</div>
+        <div class="desc">${c.Subtitle || ''}</div>
+        ${tags}
+      </div>
+    </div>`;
+}
+
+function showMapPinCard(p) {
+  const card = document.getElementById('mapPinCard');
+  const thumb = firstThumb(p);
+  const meta = categoryMeta(p.CategoryID, categories);
+  card.innerHTML = `
+    <div class="thumb">${thumb ? `<img src="${thumb}">` : ''}</div>
+    <div class="body">
+      <div class="name">${p.Title || ''}</div>
+      <div class="cat">${meta.name}</div>
+      <div class="desc" style="font-size:11.5px;color:var(--muted);">${truncate(p.Subtitle || '', 28)}</div>
+    </div>`;
+  card.classList.add('show');
+  card.onclick = () => location.href = `detail.html?id=${p.ID}`;
+}
+
+/* ── 태그 필터 시트 ───────────────────────────── */
+function openTagSheet() {
+  const base = activeCat ? allContents.filter(c => c.CategoryID === activeCat) : allContents;
+  const tagSet = new Set();
+  base.forEach(c => (c.tags || []).forEach(t => tagSet.add(t)));
+  const wrap = document.getElementById('tagPickWrap');
+  if (!tagSet.size) {
+    wrap.innerHTML = `<p style="color:var(--muted);font-size:13px;">등록된 태그가 없어요.</p>`;
+  } else {
+    wrap.innerHTML = [...tagSet].map(t =>
+      `<span class="tag-pick ${activeTags.includes(t) ? 'active' : ''}" data-tag="${t}">#${t}</span>`
+    ).join('');
+    wrap.querySelectorAll('.tag-pick').forEach(el => {
+      el.onclick = () => {
+        const t = el.dataset.tag;
+        const i = activeTags.indexOf(t);
+        if (i >= 0) activeTags.splice(i, 1); else activeTags.push(t);
+        el.classList.toggle('active');
+        document.getElementById('tagFilterBtn').classList.toggle('active', activeTags.length > 0);
+        render();
+      };
+    });
+  }
+  document.getElementById('tagSheetOverlay').classList.add('show');
+}
+function closeTagSheet() { document.getElementById('tagSheetOverlay').classList.remove('show'); }
+
+init().catch(err => {
+  console.error(err);
+  document.getElementById('listArea').innerHTML = `<div class="empty-state"><div class="glyph">⚠️</div><p>데이터를 불러오지 못했어요.<br>잠시 후 다시 시도해주세요.</p></div>`;
+});
+</script>
+</body>
+</html>
